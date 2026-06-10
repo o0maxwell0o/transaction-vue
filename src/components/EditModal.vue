@@ -21,7 +21,7 @@
         <input v-model="localForm.description" type="text" />
       </div>
       <div class="actions">
-        <button @click="save">保存</button>
+        <button @click="save" :disabled="saving">保存</button>
         <button @click="emit('close')">取消</button>
       </div>
     </div>
@@ -30,6 +30,10 @@
 
 <script setup>
 import { reactive, watch } from 'vue'
+import { useAsyncLock } from '../composables/useAsyncLock'
+
+const { loading: saving, withLock } = useAsyncLock() 
+// 防抖动
 
 const props = defineProps({
   editForm: {
@@ -48,7 +52,18 @@ watch(() => props.editForm, (newVal) => {
 }, { deep: true })
 
 const save = () => {
-  emit('save', { ...localForm })
+  withLock(async () => {
+    // 可在此添加校验
+    if (!localForm.accountNumber) {
+      alert('账号不能为空')
+      return
+    }
+    if (!localForm.amount || localForm.amount <= 0) {
+      alert('金额必须大于0')
+      return
+    }
+    emit('save', { ...localForm })
+  })
 }
 </script>
 

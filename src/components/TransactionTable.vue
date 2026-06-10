@@ -17,7 +17,7 @@
           <td><span :class="'status-' + tx.status.toLowerCase()">{{ tx.status }}</span></td>
           <td>
             <button class="edit" @click="emit('edit', tx)">编辑</button>
-            <button class="delete" @click="emit('delete', tx.id)">删除</button>
+            <button class="delete" @click="emit('delete', tx.id)" :disabled="deletingId === tx.id">删除</button>
           </td>
         </tr>
         <tr v-if="transactions.length === 0">
@@ -30,10 +30,8 @@
 
 <script setup>
 const props = defineProps({
-  transactions: {
-    type: Array,
-    required: true
-  }
+  transactions: { type: Array, required: true },
+  deletingId: { type: String, default: null }
 })
 const emit = defineEmits(['edit', 'delete'])
 

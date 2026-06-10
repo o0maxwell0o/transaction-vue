@@ -1,8 +1,8 @@
 <template>
   <div class="pagination">
-    <button @click="changePage(currentPage - 1)" :disabled="currentPage === 0">上一页</button>
+    <button @click="changePage(currentPage - 1)" :disabled="currentPage === 0 || loading">上一页</button>
     <span>第 {{ currentPage + 1 }} / {{ totalPages }} 页</span>
-    <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages - 1">下一页</button>
+    <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages - 1 || loading">下一页</button>
   </div>
 </template>
 
@@ -15,13 +15,14 @@ const props = defineProps({
   totalPages: {
     type: Number,
     required: true
-  }
+  },
+  loading: Boolean   // 新增 prop
 })
-const emit = defineEmits(['page-change'])
+const emit = defineEmits(['pageChange'])
 
 const changePage = (newPage) => {
   if (newPage >= 0 && newPage < props.totalPages) {
-    emit('page-change', newPage)
+    emit('pageChange', newPage)
   }
 }
 </script>

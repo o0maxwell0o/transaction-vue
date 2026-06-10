@@ -9,8 +9,8 @@
     <!-- 交易列表 + 分页 -->
     <div class="card">
       <h3>📋 交易记录</h3>
-      <TransactionTable :transactions="transactions" @edit="openEditModal" @delete="deleteTransaction" />
-      <Pagination v-if="totalPages > 0" :current-page="currentPage" :total-pages="totalPages"
+      <TransactionTable :transactions="transactions" :deleting-id="deletingId" @edit="openEditModal" @delete="deleteTransaction" />
+      <Pagination v-if="totalPages > 0" :current-page="currentPage" :total-pages="totalPages" :loading="pageLoading"
         @page-change="changePage" />
     </div>
 
@@ -25,6 +25,7 @@ import TransactionForm from './TransactionForm.vue'
 import TransactionTable from './TransactionTable.vue'
 import Pagination from './Pagination.vue'
 import EditModal from './EditModal.vue'
+import { useAsyncLock } from '../composables/useAsyncLock'
 
 // 环境变量 API 地址
 const API_BASE = (import.meta.env.VITE_API_BASE || 'http://localhost:8080/api') + '/transactions'
@@ -48,6 +49,11 @@ const showEditModal = ref(false)
 const editForm = ref({})
 let editingId = null
 const formRef = ref(null)
+
+const { loading: deleting, withLock: withDeleteLock } = useAsyncLock()
+// 分页加载锁
+const { loading: pageLoading, withLock: withPageLock } = useAsyncLock()
+const deletingId = ref(null)   // 正在删除的交易id
 
 // 辅助函数：格式化日期（假设后端返回 ISO 字符串）
 const formatDate = (isoString) => {
@@ -136,20 +142,23 @@ const onResetForm = () => {
 // 删除交易
 const deleteTransaction = async (id) => {
   if (!confirm('确定删除该交易吗？')) return
-  try {
-    await request(`${API_BASE}/${id}`, { method: 'DELETE' })
-    message.value = '删除成功'
-    isError.value = false
-    // 如果当前页只剩一条且不是第一页，回退一页
-    if (transactions.value.length === 1 && currentPage.value > 0) {
-      currentPage.value--
+  await withDeleteLock(async () => {
+    deletingId.value = id
+    try {
+      await request(`${API_BASE}/${id}`, { method: 'DELETE' })
+      message.value = '删除成功'
+      isError.value = false
+      if (transactions.value.length === 1 && currentPage.value > 0) {
+        currentPage.value--
+      }
+      await fetchTransactions()
+    } catch (err) {
+      message.value = '删除失败：' + err.message
+      isError.value = true
+    } finally {
+      deletingId.value = null
     }
-    fetchTransactions()
-  } catch (err) {
-    console.error(err)
-    message.value = '删除失败：' + err.message
-    isError.value = true
-  }
+  })
 }
 
 // 打开编辑弹窗
@@ -183,9 +192,11 @@ const updateTransaction = async (formData) => {
 }
 
 // 翻页
-const changePage = (newPage) => {
-  currentPage.value = newPage
-  fetchTransactions()
+const changePage = async (newPage) => {
+  await withPageLock(async () => {
+    currentPage.value = newPage
+    await fetchTransactions()
+  })
 }
 
 // 页面加载时获取数据
