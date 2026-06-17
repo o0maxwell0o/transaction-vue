@@ -35,6 +35,9 @@ export const useTransactionStore = defineStore('transaction', () => {
     const pageSize = 5
     const loading = ref(false)     // 列表加载中
     const error = ref(null)
+    const summary = ref(null)
+    const summaryLoading = ref(false)
+    const summaryError = ref(null)
 
     // 获取分页列表
     const fetchTransactions = async () => {
@@ -107,6 +110,20 @@ export const useTransactionStore = defineStore('transaction', () => {
         fetchTransactions()
     }
 
+    const fetchSummary = async () => {
+        summaryLoading.value = true
+        summaryError.value = null
+        try {
+            const data = await request(`${API_BASE}/summary`)
+            summary.value = data
+        } catch (err) {
+            summaryError.value = err.message
+            console.error(err)
+        } finally {
+            summaryLoading.value = false
+        }
+    }
+
     return {
         // state
         transactions,
@@ -115,11 +132,15 @@ export const useTransactionStore = defineStore('transaction', () => {
         pageSize,
         loading,
         error,
+        summary,
+        summaryLoading,
+        summaryError,
         // actions
         fetchTransactions,
         createTransaction,
         deleteTransaction,
         updateTransaction,
-        changePage
+        changePage,
+        fetchSummary
     }
 })
